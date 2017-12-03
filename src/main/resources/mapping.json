@@ -1,0 +1,66 @@
+{
+  "mappings": {
+    "kv" :
+    {"properties":
+    {
+      "agent": {"type" : "String"},
+      "class": {"type" : "String"},
+      "name": {"type" : "String"},
+      "value": {"type" : "Long"},
+      "tstamp": {"type" : "date"}
+    }
+    },
+    "call" :
+    {"properties":
+    {
+      "agent": {"type" : "String"},
+      "class": {"type" : "String"},
+      "methodname": {"type" : "String"},
+      "signature": {"type" : "String"},
+      "duration": {"type" : "Long"},
+      "exception": {"type" : "String"},
+      "parameters": {
+        "properties" : {
+          "url" : {"type" : "String","index": "not_analyzed"},
+          "other" : {"type" : "String", "index": "not_analyzed"}
+        }
+      },
+      "tstamp": {"type" : "date"}
+    }
+    },
+    "web" :
+    {"properties":
+    {
+      "agent": {"type" : "String"},
+      "class": {"type" : "String"},
+      "duration": {"type" : "Long"},
+      "exception": {"type" : "String"},
+      "parameters": {
+        "properties" : {
+          "url" : {"type" : "String", "index": "not_analyzed"},
+          "useragent" : {"type" : "String", "index": "not_analyzed"},
+          "device" : {"type" : "String", "index": "not_analyzed"},
+          "vendor" : {"type" : "String", "index": "not_analyzed"},
+          "resolution" : {"type" : "String", "index": "not_analyzed"},
+          "referer" : {"type" : "String", "index": "not_analyzed"},
+          "destination" : {"type" : "String", "index": "not_analyzed"},
+          "customerid" : {"type" : "String", "index": "not_analyzed"},
+          "remotehost" : {"type" : "ip"},
+          "other" : {"type" : "String", "index": "not_analyzed"}
+        }
+      },
+      "rum": {
+        "properties" : {
+          "srv_connect_time" : {"type" : "Long"},
+          "response_avail_time" : {"type" : "Long"},
+          "doc_download_time" : {"type" : "Long"},
+          "doc_proc_time" : {"type" : "Long"},
+          "doc_render_time" : {"type" : "Long"}
+        }
+      },
+      "location" : {"type" : "geo_point"},
+      "tstamp": {"type" : "date"}
+    }
+    }
+  }
+}

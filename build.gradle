@@ -1,0 +1,22 @@
+group 'com.flopsar.addons'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'application'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+mainClassName = 'com.flopsar.addons.esearch.Main'
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    compile 'org.elasticsearch.client:transport:5.6.4'
+    compile 'com.flopsar:flopsar-fdbc:2.1.6'
+    compile 'com.googlecode.json-simple:json-simple:1.1.1'
+    compile 'com.google.guava:guava:22.0'
+}
