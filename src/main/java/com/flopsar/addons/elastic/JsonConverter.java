@@ -1,6 +1,5 @@
 package com.flopsar.addons.elastic;
 
-import com.flopsar.fdbc.api.fdb.Invocation;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -93,9 +92,9 @@ public class JsonConverter {
         obj.put(CALL_DURATION, duration);
 
         if (parameters != null && !parameters.isEmpty()) {
-            String exc = parameters.remove(Invocation.EXCEPTION_KEY);
-            if (exc != null)
-                obj.put(CALL_EXCEPTION, exc);
+//            String exc = parameters.remove(Invocation.EXCEPTION_KEY);
+//            if (exc != null)
+//                obj.put(CALL_EXCEPTION, exc);
 
             String url = parameters.remove("URL");
             StringBuffer sb = new StringBuffer();
@@ -125,10 +124,10 @@ public class JsonConverter {
         obj.put(CALL_DURATION, duration);
 
         if (parameters != null && !parameters.isEmpty()) {
-            String exc = parameters.remove(Invocation.EXCEPTION_KEY);
+            //String exc = parameters.remove(Invocation.EXCEPTION_KEY);
             String location = parameters.remove(WEB_PKEY_GEOIP);
-            if (exc != null)
-                obj.put(CALL_EXCEPTION, exc);
+//            if (exc != null)
+//                obj.put(CALL_EXCEPTION, exc);
 
             if (location != null) {
                 try {

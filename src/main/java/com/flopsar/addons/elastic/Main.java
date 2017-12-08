@@ -3,7 +3,6 @@ package com.flopsar.addons.elastic;
 
 import com.flopsar.fdbc.api.FDBCFactory;
 import com.flopsar.fdbc.api.fdb.ConnectionFDB;
-import com.flopsar.fdbc.exception.FDBCException;
 
 import java.io.FileInputStream;
 import java.util.Properties;
@@ -57,8 +56,9 @@ public class Main {
 
 
 
-    private void run(ElasticSearch es,String host,int port) throws FDBCException {
+    private void run(ElasticSearch es,String host,int port) throws Exception {
         Flopsar fdbc = new Flopsar();
+        System.out.println("Connecting to "+host);
         ConnectionFDB conn = FDBCFactory.createConnection(host,port,(dbHost, dbPort) -> {
             /* Here, handle database connection closed event. */
         },0);
@@ -78,6 +78,7 @@ public class Main {
                 to++;
 
             System.out.println(String.format("Cycle ended within %d seconds", TimeUnit.SECONDS.convert(endTime - startTime,TimeUnit.MILLISECONDS)));
+            break;
         }
     }
 

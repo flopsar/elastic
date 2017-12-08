@@ -1,15 +1,14 @@
 package com.flopsar.addons.elastic;
 
 import com.flopsar.api.AgentId;
-import com.flopsar.fdbc.api.Connection;
 import com.flopsar.fdbc.api.agent.Agent;
-import com.flopsar.fdbc.api.fdb.*;
-import com.flopsar.fdbc.exception.FDBCException;
-import javafx.application.Platform;
-import org.elasticsearch.action.bulk.BulkRequestBuilder;
-import org.junit.experimental.theories.DataPoint;
+import com.flopsar.fdbc.api.fdb.ConnectionFDB;
+import com.flopsar.fdbc.api.fdb.ResponseAsyncCallback;
+import com.flopsar.fdbc.api.fdb.RootCall;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Matcher;
@@ -24,7 +23,7 @@ public class Flopsar {
 
 
 
-    private ConcurrentLinkedQueue<RootCall> retrieveRootCalls(ConnectionFDB conn,int threshold,Map<Long,long[]> agentsMap) throws Exception {
+    private ConcurrentLinkedQueue<RootCall> retrieveRootCalls(ConnectionFDB conn, int threshold, Map<Long,long[]> agentsMap) throws Exception {
         ConcurrentLinkedQueue<RootCall> rootCallsQueue = new ConcurrentLinkedQueue<>();
 
         conn.findRootCallsByPattern(threshold, Integer.MAX_VALUE, agentsMap, null, null, null, (response, responseStatus) -> {
@@ -51,12 +50,12 @@ public class Flopsar {
 
     private void retrieveSymbols(ConnectionFDB conn,List<Long> classesToRetrieve,List<Long> methodsToRetrieve) {
         if (!classesToRetrieve.isEmpty()) {
-            conn.findSymbolsById(SymbolType.SYMBOL_CLASS,classesToRetrieve,new ResponseAsyncCallback<List<Symbol>>(){
-                @Override
-                public void onResponseReceived(List<Symbol> symbols, int i) {
-
-                }
-            });
+//            conn.findSymbolsById(SymbolType.SYMBOL_CLASS,classesToRetrieve,new ResponseAsyncCallback<List<Symbol>>(){
+//                @Override
+//                public void onResponseReceived(List<Symbol> symbols, int i) {
+//
+//                }
+//            });
         }
     }
 
@@ -100,61 +99,60 @@ public class Flopsar {
             }
             fa.completeSymbols(rc);
         }
+        rootCallsQueue.clear();
 
         for (FlopsarAgent fa: flopsarAgentsMap.values()) {
-
+            fa.completeMissingSymbols(conn,elastic);
         }
 
 
 
-
-
-            //System.out.println("Processing agent ... "+a.getIdentifier());
-            long t1 = from;
-            while (t1 < to) {
-                List<RootCall> stacks = conn.
-                        conn.queryStacks(a.getIdentifier(), t1, to, 0, Long.MAX_VALUE, 8000, null, false, false);
-
-                Collections.sort(stacks, (o1, o2) -> (int) (o1.getOrigin().getTimeStamp() - o2.getOrigin().getTimeStamp()));
-
-                long newT1 = stacks.get(stacks.size() - 1).getOrigin().getTimeStamp() + 1;
-                if (newT1 > t1) {
-                    t1 = newT1;
-                }
-
-                BulkRequestBuilder bulk = es.prepareBulk();
-                int collected = 0;
-                for (Stack s : stacks) {
-                    //System.out.println("Processing stack ... "+s.getOrigin().getClassName());
-                    // List<Invocation> calls = conn.queryStackInvocations(s);
-
-                    Invocation i = s.getOrigin();
-//                    for(Invocation i : calls){
-                    String index = es.ensureIndex(i.getTimeStamp());
-                    if (index == null) {
-                        System.err.println("Unable to create a new index!");
-                        break;
-                    }
-                    if (i.getClassName().equals("WebRequest")) {
-                        String json = JsonConverter.convertWEB(a.getIdentifier(), i.getClassName(), i.getDuration(), i.getTimeStamp(), i.getParameters());
-                        if (json == null)
-                            continue;
-                        bulk.add(es.getClient().prepareIndex(index, ElasticSearch.TYPE_WEB).setSource(json));
-                        collected++;
-                    } else {
-                        String json = JsonConverter.convertCALL(a.getIdentifier(), i.getClassName(), i.getMethodName(),
-                                i.getMethodSignature(), i.getDuration(), i.getTimeStamp(), i.getParameters(), i.isExceptionThrown());
-                        if (json == null)
-                            continue;
-                        bulk.add(es.getClient().prepareIndex(index, ElasticSearch.TYPE_CALL).setSource(json));
-                        collected++;
-                    }
-                    //}
-                    if (collected > 0)
-                        es.sendBulk(bulk);
-                }
-            }
+//
+//
+//            //System.out.println("Processing agent ... "+a.getIdentifier());
+//            long t1 = from;
+//            while (t1 < to) {
+//                List<RootCall> stacks = conn.
+//                        conn.queryStacks(a.getIdentifier(), t1, to, 0, Long.MAX_VALUE, 8000, null, false, false);
+//
+//                Collections.sort(stacks, (o1, o2) -> (int) (o1.getOrigin().getTimeStamp() - o2.getOrigin().getTimeStamp()));
+//
+//                long newT1 = stacks.get(stacks.size() - 1).getOrigin().getTimeStamp() + 1;
+//                if (newT1 > t1) {
+//                    t1 = newT1;
+//                }
+//
+//                BulkRequestBuilder bulk = es.prepareBulk();
+//                int collected = 0;
+//                for (Stack s : stacks) {
+//                    //System.out.println("Processing stack ... "+s.getOrigin().getClassName());
+//                    // List<Invocation> calls = conn.queryStackInvocations(s);
+//
+//                    Invocation i = s.getOrigin();
+////                    for(Invocation i : calls){
+//                    String index = es.ensureIndex(i.getTimeStamp());
+//                    if (index == null) {
+//                        System.err.println("Unable to create a new index!");
+//                        break;
+//                    }
+//                    if (i.getClassName().equals("WebRequest")) {
+//                        String json = JsonConverter.convertWEB(a.getIdentifier(), i.getClassName(), i.getDuration(), i.getTimeStamp(), i.getParameters());
+//                        if (json == null)
+//                            continue;
+//                        bulk.add(es.getClient().prepareIndex(index, ElasticSearch.TYPE_WEB).setSource(json));
+//                        collected++;
+//                    } else {
+//                        String json = JsonConverter.convertCALL(a.getIdentifier(), i.getClassName(), i.getMethodName(),
+//                                i.getMethodSignature(), i.getDuration(), i.getTimeStamp(), i.getParameters(), i.isExceptionThrown());
+//                        if (json == null)
+//                            continue;
+//                        bulk.add(es.getClient().prepareIndex(index, ElasticSearch.TYPE_CALL).setSource(json));
+//                        collected++;
+//                    }
+//                    //}
+//                    if (collected > 0)
+//                        es.sendBulk(bulk);
+//                }
+//            }
         }
     }
-
-}
