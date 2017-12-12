@@ -1,5 +1,6 @@
 package com.flopsar.addons.elastic;
 
+import com.flopsar.api.AgentId;
 import com.flopsar.fdbc.api.agent.Agent;
 import com.flopsar.fdbc.api.fdb.*;
 import com.flopsar.fdbc.exception.FDBCException;
@@ -25,8 +26,6 @@ public class FlopsarAgent {
     public FlopsarAgent(Agent a){
         agent = a;
     }
-
-
 
 
     public void completeSymbols(RootCall rc){
@@ -57,9 +56,12 @@ public class FlopsarAgent {
 
 
     private void submitToElastic(ElasticSearch elastic){
+        String endpoint = String.format("/%s/%s/",Main.getCurrentIndex(),ElasticSearch.TYPE_CALL);
         if (!rootCalls.isEmpty()){
             for (RootCall rc : rootCalls){
-                System.out.println("ROOT_CALL "+rc.getClassSymbol().getName()+" "+rc.getMethodSymbol().getName());
+                String json = JsonConverter.convertCALL(getId().getName(),rc.getClassSymbol().getName(),rc.getMethodSymbol().getName(),
+                        rc.getMethodSymbol().getDescription(),rc.getDuration(),rc.getTimestamp(),rc.getParameters(),false);
+                elastic.sendRest(json,endpoint);
             }
         }
         rootCalls.clear();
@@ -91,12 +93,12 @@ public class FlopsarAgent {
         }
 
         if (!missingClasses.isEmpty()){
-            conn.findSymbolsById(SymbolType.SYMBOL_CLASS,getId(),missingClasses, (symbols, responseStatus) -> {
+            conn.findSymbolsById(SymbolType.SYMBOL_CLASS,getId().getId(),missingClasses, (symbols, responseStatus) -> {
                 handleSymbolsData(symbols,responseStatus,symbolsClass);
             });
         }
         if (!missingMethods.isEmpty()){
-            conn.findSymbolsById(SymbolType.SYMBOL_METHOD,getId(),missingMethods, (symbols, responseStatus) -> {
+            conn.findSymbolsById(SymbolType.SYMBOL_METHOD,getId().getId(),missingMethods, (symbols, responseStatus) -> {
                 handleSymbolsData(symbols,responseStatus,symbolsMethod);
             });
         }
@@ -116,12 +118,13 @@ public class FlopsarAgent {
         missingMethods.clear();
         missingClasses.clear();
         incompleteRootCalls.clear();
+        from++;
     }
 
 
 
-    public long getId(){
-        return agent.getId().getId();
+    public AgentId getId(){
+        return agent.getId();
     }
 
     public long getFrom() {

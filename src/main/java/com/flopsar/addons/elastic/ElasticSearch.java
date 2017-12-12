@@ -2,40 +2,42 @@ package com.flopsar.addons.elastic;
 
 import com.google.common.io.Resources;
 import org.apache.commons.codec.Charsets;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.methods.HttpHead;
-import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.elasticsearch.action.bulk.BulkItemResponse;
-import org.elasticsearch.action.bulk.BulkRequestBuilder;
-import org.elasticsearch.action.bulk.BulkResponse;
-import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
-import org.elasticsearch.transport.client.PreBuiltTransportClient;
+import org.apache.http.nio.entity.NStringEntity;
+import org.apache.http.util.EntityUtils;
+import org.elasticsearch.client.Response;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.InetAddress;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
-
+import java.util.Map;
 
 
 public class ElasticSearch {
 
     private static final DateFormat format = new SimpleDateFormat("YYYY.MM.dd");
-    private final CloseableHttpClient httpclient = HttpClients.createDefault();
-    public static final String TYPE_KV = "kv";
+    private final CloseableHttpClient httpclient;
     public static final String TYPE_CALL = "call";
-    private final TransportClient client;
+    private final RestClient restClient;
 
     private final String index;
     private String currentDay = "";
@@ -43,29 +45,38 @@ public class ElasticSearch {
     private final String elasticURL;
 
 
-    private ElasticSearch(String host,int portHTTP,int portTCP,String index) throws UnknownHostException {
+    private ElasticSearch(String host,int portHTTP,String index) {
         this.elasticURL = String.format("http://%s:%d/",host,portHTTP);
         this.index = index;
-        client = new PreBuiltTransportClient(Settings.EMPTY)
-                .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), portTCP));
+        CredentialsProvider credsProvider = new BasicCredentialsProvider();
+        credsProvider.setCredentials(new AuthScope(host, portHTTP),
+                new UsernamePasswordCredentials("elastic", "changeme"));
+
+        RestClientBuilder builder = RestClient.builder(new HttpHost(host, portHTTP, "http"));
+        this.restClient = builder.setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder.setDefaultCredentialsProvider(credsProvider)).build();
+        this.httpclient = HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
     }
 
 
-    public void createIndexIfAbsent(String mapping) throws IOException {
-        String url = String.format("%s/%s%s",elasticURL,index,currentDay);
+    private void createIndexIfAbsent(String mapping) throws IOException {
+        String url = String.format("%s%s%s",elasticURL,index,currentDay);
         System.out.println("Checking index existence "+url);
         HttpHead head = new HttpHead(url);
         HttpResponse response = httpclient.execute(head);
-        boolean notExists = response.getStatusLine().getStatusCode() == 404;
-        if(notExists){
+        int rcode = response.getStatusLine().getStatusCode();
+        if (rcode == 404){
             System.out.println("New index creating: "+currentDay);
             int code = send(url,mapping);
-            System.out.println("Response Index Create Code : " + code);
+            if (200 != code){
+                System.err.println("Response Index Create Code : " + code);
+            }
+        } else if (rcode != 200){
+            System.err.println(response.toString());
         }
     }
 
     private int send(String url,String json) throws IOException {
-        HttpPost post = new HttpPost(url);
+        HttpPut post = new HttpPut(url);
         StringEntity jsonEntity = new StringEntity(json, ContentType.create("text/plain", "UTF-8"));
         post.setEntity(jsonEntity);
         HttpResponse response = httpclient.execute(post);
@@ -78,7 +89,7 @@ public class ElasticSearch {
         BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
 
         StringBuilder result = new StringBuilder();
-        String line = "";
+        String line;
         while ((line = rd.readLine()) != null) {
             result.append(line);
         }
@@ -102,42 +113,32 @@ public class ElasticSearch {
     }
 
 
-    public void sendBulk(BulkRequestBuilder bulk){
+    public void sendRest(String json,String endpoint){
+        Map<String, String> params = Collections.emptyMap();
+        HttpEntity entity = new NStringEntity(json, ContentType.APPLICATION_JSON);
         try {
-            //System.out.println("Sending bulk data...");
-            BulkResponse bulkResponse = bulk.get();
-            if (bulkResponse.hasFailures()) {
-                for (BulkItemResponse r : bulkResponse) {
-                    System.err.println(r.getFailureMessage());
-                }
+            Response response = restClient.performRequest("POST", endpoint,params, entity);
+            int rcode = response.getStatusLine().getStatusCode();
+            if (200 != rcode && 201 != rcode){
+                String responseBody = EntityUtils.toString(response.getEntity());
+                System.err.println(responseBody);
             }
-        } catch(Throwable tx){
-            tx.printStackTrace();
+        } catch (IOException e) {
+            System.err.println(json);
+            e.printStackTrace();
         }
     }
 
 
-    public static ElasticSearch init(String host,int portHTTP,int portTCP,String index) throws IOException {
-        ElasticSearch es = new ElasticSearch(host,portHTTP,portTCP,index);
+    public static ElasticSearch init(String host,int portHTTP,String index) throws IOException {
+        ElasticSearch es = new ElasticSearch(host,portHTTP,index);
         URL url = Resources.getResource("mapping.json");
         es.MAPPING = Resources.toString(url, Charsets.UTF_8);
         return es;
     }
 
 
-    public BulkRequestBuilder prepareBulk(){
-        return client.prepareBulk();
-    }
-    public TransportClient getClient(){
-        return client;
-    }
 
-
-
-    public void submit(){
-        BulkRequestBuilder bulk = client.prepareBulk();
-
-    }
 
 
 }

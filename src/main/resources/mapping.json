@@ -3,26 +3,26 @@
     "kv" :
     {"properties":
     {
-      "agent": {"type" : "String"},
-      "class": {"type" : "String"},
-      "name": {"type" : "String"},
-      "value": {"type" : "Long"},
+      "agent": {"type" : "text"},
+      "class": {"type" : "text"},
+      "name": {"type" : "text"},
+      "value": {"type" : "long"},
       "tstamp": {"type" : "date"}
     }
     },
     "call" :
     {"properties":
     {
-      "agent": {"type" : "String"},
-      "class": {"type" : "String"},
-      "methodname": {"type" : "String"},
-      "signature": {"type" : "String"},
-      "duration": {"type" : "Long"},
-      "exception": {"type" : "String"},
+      "agent": {"type" : "text"},
+      "class": {"type" : "text"},
+      "methodname": {"type" : "text"},
+      "signature": {"type" : "text"},
+      "duration": {"type" : "long"},
+      "exception": {"type" : "text"},
       "parameters": {
         "properties" : {
-          "url" : {"type" : "String","index": "not_analyzed"},
-          "other" : {"type" : "String", "index": "not_analyzed"}
+          "url" : {"type" : "text","index": "not_analyzed"},
+          "other" : {"type" : "text", "index": "not_analyzed"}
         }
       },
       "tstamp": {"type" : "date"}

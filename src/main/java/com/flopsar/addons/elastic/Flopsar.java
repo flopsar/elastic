@@ -28,8 +28,10 @@ public class Flopsar {
 
         conn.findRootCallsByPattern(threshold, Integer.MAX_VALUE, agentsMap, null, null, null, (response, responseStatus) -> {
             if (response != null && (ResponseAsyncCallback.RESPONSE_ERROR != responseStatus)) {
+                System.out.println("Some data received. "+response.size());
                 rootCallsQueue.addAll(response);
-            } else if (ResponseAsyncCallback.RESPONSE_GEOF == responseStatus || ResponseAsyncCallback.RESPONSE_ERROR == responseStatus) {
+            }
+            if (0 != responseStatus) {
                 synchronized (rootCallsQueue) {
                     rootCallsQueue.notify();
                 }
@@ -48,29 +50,12 @@ public class Flopsar {
     }
 
 
-    private void retrieveSymbols(ConnectionFDB conn,List<Long> classesToRetrieve,List<Long> methodsToRetrieve) {
-        if (!classesToRetrieve.isEmpty()) {
-//            conn.findSymbolsById(SymbolType.SYMBOL_CLASS,classesToRetrieve,new ResponseAsyncCallback<List<Symbol>>(){
-//                @Override
-//                public void onResponseReceived(List<Symbol> symbols, int i) {
-//
-//                }
-//            });
-        }
-    }
 
 
-
-
-
-
-
-    void loadCalls(ConnectionFDB conn, ElasticSearch elastic, long from, long to,Pattern flopsarAgentPattern,int threshold) throws Exception {
-        List<Agent> agents = conn.readAgents();
+    private void agentsToQuery(Map<Long,long[]> agentsMap,long from,long to,List<Agent> agents,Pattern flopsarAgentPattern){
+        agentsMap.clear();
         if (agents.isEmpty())
             return;
-
-        Map<Long,long[]> agentsMap = new HashMap<>();
 
         for (Agent a : agents) {
             Matcher m = flopsarAgentPattern.matcher(a.getId().getName());
@@ -80,48 +65,50 @@ public class Flopsar {
             FlopsarAgent fa = flopsarAgentsMap.get(a.getId().getId());
             if (fa == null) {
                 fa = new FlopsarAgent(a);
-                flopsarAgentsMap.put(fa.getId(),fa);
+                flopsarAgentsMap.put(fa.getId().getId(),fa);
                 fa.setFrom(from);
                 fa.setTo(to);
             }
-            agentsMap.put(fa.getId(), new long[]{fa.getFrom(), fa.getTo()});
+            if (fa.getTo() <= to)
+                agentsMap.put(fa.getId().getId(), new long[]{fa.getFrom(), fa.getTo()});
         }
+    }
 
-        ConcurrentLinkedQueue<RootCall> rootCallsQueue = retrieveRootCalls(conn,threshold,agentsMap);
-        if (rootCallsQueue.isEmpty())
+
+
+    void loadCalls(ConnectionFDB conn, ElasticSearch elastic, long from, long to,Pattern flopsarAgentPattern,int threshold) throws Exception {
+        List<Agent> agents = conn.readAgents();
+        if (agents.isEmpty())
             return;
 
-        for (RootCall rc : rootCallsQueue) {
-            FlopsarAgent fa = flopsarAgentsMap.get(rc.getAgentId());
-            if (fa == null) {
-                /* No such agent. */
-                continue;
+        System.out.println("Agents available "+agents.size());
+        Map<Long,long[]> agentsMap = new HashMap<>();
+        do {
+            agentsToQuery(agentsMap,from,to,agents,flopsarAgentPattern);
+            if (agentsMap.isEmpty())
+                return;
+
+            ConcurrentLinkedQueue<RootCall> rootCallsQueue = retrieveRootCalls(conn,threshold,agentsMap);
+            if (rootCallsQueue.isEmpty())
+                return;
+
+            for (RootCall rc : rootCallsQueue) {
+                FlopsarAgent fa = flopsarAgentsMap.get(rc.getAgentId());
+                if (fa == null) {
+                    /* No such agent. */
+                    continue;
+                }
+                fa.completeSymbols(rc);
             }
-            fa.completeSymbols(rc);
-        }
-        rootCallsQueue.clear();
+            rootCallsQueue.clear();
 
-        for (FlopsarAgent fa: flopsarAgentsMap.values()) {
-            fa.completeMissingSymbols(conn,elastic);
-        }
-
+            for (FlopsarAgent fa: flopsarAgentsMap.values()) {
+                fa.completeMissingSymbols(conn,elastic);
+            }
+        } while (!agentsMap.isEmpty());
 
 
-//
-//
-//            //System.out.println("Processing agent ... "+a.getIdentifier());
-//            long t1 = from;
-//            while (t1 < to) {
-//                List<RootCall> stacks = conn.
-//                        conn.queryStacks(a.getIdentifier(), t1, to, 0, Long.MAX_VALUE, 8000, null, false, false);
-//
-//                Collections.sort(stacks, (o1, o2) -> (int) (o1.getOrigin().getTimeStamp() - o2.getOrigin().getTimeStamp()));
-//
-//                long newT1 = stacks.get(stacks.size() - 1).getOrigin().getTimeStamp() + 1;
-//                if (newT1 > t1) {
-//                    t1 = newT1;
-//                }
-//
+
 //                BulkRequestBuilder bulk = es.prepareBulk();
 //                int collected = 0;
 //                for (Stack s : stacks) {
