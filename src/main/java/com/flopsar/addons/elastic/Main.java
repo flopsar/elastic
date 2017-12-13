@@ -70,7 +70,7 @@ public class Main {
         if(conn == null)
             return;
 
-        long to = System.currentTimeMillis() - TimeUnit.MILLISECONDS.convert(315,TimeUnit.DAYS);
+        long to = System.currentTimeMillis() - TimeUnit.MILLISECONDS.convert(316,TimeUnit.DAYS);
         long from = to - TimeUnit.MILLISECONDS.convert(10,TimeUnit.HOURS);
         while (true){
             System.out.println("Next cycle started. FROM: "+new Date(from)+" TO: "+new Date(to));
@@ -83,13 +83,15 @@ public class Main {
             long startTime = System.currentTimeMillis();
             fdbc.loadCalls(conn,es,from,to,flopsarAgentPattern,threshold);
             long endTime = System.currentTimeMillis();
+
+            long secs = TimeUnit.SECONDS.convert(endTime - startTime,TimeUnit.MILLISECONDS);
+            System.out.println(String.format("Cycle ended within %d seconds", secs));
+            if (secs == 0){
+                Thread.sleep(1000);
+                endTime += 1000;
+            }
             from = to + 1;
             to = endTime;
-            if (to <= from)
-                to++;
-
-            System.out.println(String.format("Cycle ended within %d seconds", TimeUnit.SECONDS.convert(endTime - startTime,TimeUnit.MILLISECONDS)));
-            break;
         }
     }
 
@@ -103,7 +105,7 @@ public class Main {
 
         Main m = new Main();
         m.loadSettings(args[0]);
-        ElasticSearch elastic = ElasticSearch.init(m.elasticHost,m.elasticHttpPort,m.elasticIndexPrefix);
+        ElasticSearch elastic = ElasticSearch.init(m.elasticHost,m.elasticHttpPort,m.elasticIndexPrefix,m.elasticUsername,m.elasticPassword);
         m.run(elastic,m.flopsarHost,m.flopsarPort);
     }
 

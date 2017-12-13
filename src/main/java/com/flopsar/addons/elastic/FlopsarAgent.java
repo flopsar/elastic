@@ -55,16 +55,19 @@ public class FlopsarAgent {
     }
 
 
-    private void submitToElastic(ElasticSearch elastic){
+    private int submitToElastic(ElasticSearch elastic){
         String endpoint = String.format("/%s/%s/",Main.getCurrentIndex(),ElasticSearch.TYPE_CALL);
+        int sent = 0;
         if (!rootCalls.isEmpty()){
             for (RootCall rc : rootCalls){
                 String json = JsonConverter.convertCALL(getId().getName(),rc.getClassSymbol().getName(),rc.getMethodSymbol().getName(),
-                        rc.getMethodSymbol().getDescription(),rc.getDuration(),rc.getTimestamp(),rc.getParameters(),false);
-                elastic.sendRest(json,endpoint);
+                        rc.getMethodSymbol().getDescription(),rc.getDuration(),rc.getTimestamp(),rc.getParameters());
+                if (elastic.sendRest(json,endpoint))
+                    sent++;
             }
         }
         rootCalls.clear();
+        return sent;
     }
 
 
@@ -84,7 +87,7 @@ public class FlopsarAgent {
 
 
 
-    public void completeMissingSymbols(ConnectionFDB conn,ElasticSearch elastic) throws FDBCException {
+    public int completeMissingSymbols(ConnectionFDB conn,ElasticSearch elastic) throws FDBCException {
         if (!missingClasses.isEmpty()){
             symbolsMonitor.getAndIncrement();
         }
@@ -113,12 +116,17 @@ public class FlopsarAgent {
             completeSymbols(rc);
         }
 
-        submitToElastic(elastic);
+        int sent = submitToElastic(elastic);
 
         missingMethods.clear();
         missingClasses.clear();
         incompleteRootCalls.clear();
         from++;
+        if (from > to){
+            from = to;
+            to++;
+        }
+        return sent;
     }
 
 

@@ -28,7 +28,7 @@ public class Flopsar {
 
         conn.findRootCallsByPattern(threshold, Integer.MAX_VALUE, agentsMap, null, null, null, (response, responseStatus) -> {
             if (response != null && (ResponseAsyncCallback.RESPONSE_ERROR != responseStatus)) {
-                System.out.println("Some data received. "+response.size());
+                System.out.println("# RootCalls received: "+response.size());
                 rootCallsQueue.addAll(response);
             }
             if (0 != responseStatus) {
@@ -77,20 +77,22 @@ public class Flopsar {
 
 
     void loadCalls(ConnectionFDB conn, ElasticSearch elastic, long from, long to,Pattern flopsarAgentPattern,int threshold) throws Exception {
+
         List<Agent> agents = conn.readAgents();
         if (agents.isEmpty())
             return;
 
         System.out.println("Agents available "+agents.size());
         Map<Long,long[]> agentsMap = new HashMap<>();
+        int totalSent = 0;
         do {
             agentsToQuery(agentsMap,from,to,agents,flopsarAgentPattern);
             if (agentsMap.isEmpty())
-                return;
+                break;
 
             ConcurrentLinkedQueue<RootCall> rootCallsQueue = retrieveRootCalls(conn,threshold,agentsMap);
             if (rootCallsQueue.isEmpty())
-                return;
+                break;
 
             for (RootCall rc : rootCallsQueue) {
                 FlopsarAgent fa = flopsarAgentsMap.get(rc.getAgentId());
@@ -102,44 +104,13 @@ public class Flopsar {
             }
             rootCallsQueue.clear();
 
-            for (FlopsarAgent fa: flopsarAgentsMap.values()) {
-                fa.completeMissingSymbols(conn,elastic);
+            for (Long aid : agentsMap.keySet()) {
+                FlopsarAgent fa = flopsarAgentsMap.get(aid);
+                totalSent += fa.completeMissingSymbols(conn,elastic);
             }
         } while (!agentsMap.isEmpty());
 
+        System.out.println("Total calls sent: "+totalSent);
+    }
 
-
-//                BulkRequestBuilder bulk = es.prepareBulk();
-//                int collected = 0;
-//                for (Stack s : stacks) {
-//                    //System.out.println("Processing stack ... "+s.getOrigin().getClassName());
-//                    // List<Invocation> calls = conn.queryStackInvocations(s);
-//
-//                    Invocation i = s.getOrigin();
-////                    for(Invocation i : calls){
-//                    String index = es.ensureIndex(i.getTimeStamp());
-//                    if (index == null) {
-//                        System.err.println("Unable to create a new index!");
-//                        break;
-//                    }
-//                    if (i.getClassName().equals("WebRequest")) {
-//                        String json = JsonConverter.convertWEB(a.getIdentifier(), i.getClassName(), i.getDuration(), i.getTimeStamp(), i.getParameters());
-//                        if (json == null)
-//                            continue;
-//                        bulk.add(es.getClient().prepareIndex(index, ElasticSearch.TYPE_WEB).setSource(json));
-//                        collected++;
-//                    } else {
-//                        String json = JsonConverter.convertCALL(a.getIdentifier(), i.getClassName(), i.getMethodName(),
-//                                i.getMethodSignature(), i.getDuration(), i.getTimeStamp(), i.getParameters(), i.isExceptionThrown());
-//                        if (json == null)
-//                            continue;
-//                        bulk.add(es.getClient().prepareIndex(index, ElasticSearch.TYPE_CALL).setSource(json));
-//                        collected++;
-//                    }
-//                    //}
-//                    if (collected > 0)
-//                        es.sendBulk(bulk);
-//                }
-//            }
-        }
     }

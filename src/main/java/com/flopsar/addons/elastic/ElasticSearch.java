@@ -45,16 +45,20 @@ public class ElasticSearch {
     private final String elasticURL;
 
 
-    private ElasticSearch(String host,int portHTTP,String index) {
+    private ElasticSearch(String host,int portHTTP,String index,String username,String password) {
         this.elasticURL = String.format("http://%s:%d/",host,portHTTP);
         this.index = index;
-        CredentialsProvider credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(new AuthScope(host, portHTTP),
-                new UsernamePasswordCredentials("elastic", "changeme"));
+
+        CredentialsProvider credsProvider = username != null ? new BasicCredentialsProvider() : null;
+        if (username != null) {
+            credsProvider.setCredentials(new AuthScope(host, portHTTP), new UsernamePasswordCredentials(username, password));
+        }
 
         RestClientBuilder builder = RestClient.builder(new HttpHost(host, portHTTP, "http"));
-        this.restClient = builder.setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder.setDefaultCredentialsProvider(credsProvider)).build();
-        this.httpclient = HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
+        this.restClient = credsProvider == null ? builder.build()
+                : builder.setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder.setDefaultCredentialsProvider(credsProvider)).build();
+        this.httpclient = credsProvider == null ? HttpClients.createDefault()
+                : HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
     }
 
 
@@ -113,7 +117,7 @@ public class ElasticSearch {
     }
 
 
-    public void sendRest(String json,String endpoint){
+    public boolean sendRest(String json,String endpoint){
         Map<String, String> params = Collections.emptyMap();
         HttpEntity entity = new NStringEntity(json, ContentType.APPLICATION_JSON);
         try {
@@ -122,16 +126,19 @@ public class ElasticSearch {
             if (200 != rcode && 201 != rcode){
                 String responseBody = EntityUtils.toString(response.getEntity());
                 System.err.println(responseBody);
+                return false;
             }
         } catch (IOException e) {
             System.err.println(json);
             e.printStackTrace();
+            return false;
         }
+        return true;
     }
 
 
-    public static ElasticSearch init(String host,int portHTTP,String index) throws IOException {
-        ElasticSearch es = new ElasticSearch(host,portHTTP,index);
+    public static ElasticSearch init(String host,int portHTTP,String index,String username,String password) throws IOException {
+        ElasticSearch es = new ElasticSearch(host,portHTTP,index,username,password);
         URL url = Resources.getResource("mapping.json");
         es.MAPPING = Resources.toString(url, Charsets.UTF_8);
         return es;

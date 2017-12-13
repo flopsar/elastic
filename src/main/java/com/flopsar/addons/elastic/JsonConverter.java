@@ -30,7 +30,7 @@ public class JsonConverter {
 
 
     public static String convertCALL(String agent, String clazz, String method, String signature,
-                                     long duration, long tstamp, Map<String, String> parameters, boolean exception) {
+                                     long duration, long tstamp, Map<String, String> parameters) {
         JSONObject obj = prepare(agent, tstamp, clazz);
         obj.put(CALL_METHOD, method);
         obj.put(CALL_SIGNATURE, signature);
