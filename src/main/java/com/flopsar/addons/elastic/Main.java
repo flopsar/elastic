@@ -31,16 +31,28 @@ public class Main {
     private static String currentIndex;
     private String elasticUsername;
     private String elasticPassword;
+    private static final Properties defaults = new Properties();
 
+    static {
+        defaults.setProperty(ES_HOST,"localhost");
+        defaults.setProperty(ES_PORT_HTTP,"9200");
+        defaults.setProperty(FLOPSAR_DURATION_THRESHOLD,"5");
+        defaults.setProperty(ES_INDEX,"flopsar-");
+    }
 
 
     private void loadSettings(String settingsFile) throws Exception {
-        Properties props = new Properties();
+        Properties props = new Properties(defaults);
         props.load(new FileInputStream(settingsFile));
 
-        String[] address = props.getProperty(FLOPSAR_ADDRESS).split(":");
+        String flopsarAddress = props.getProperty(FLOPSAR_ADDRESS);
+        if (flopsarAddress == null){
+            System.err.println("Flopsar database address not specified.");
+            return;
+        }
+        String[] address = flopsarAddress.split(":");
         if (address.length != 2){
-            System.err.println("Invalid Flopsar database address.");
+            System.err.println("Invalid Flopsar database address");
             return;
         }
         flopsarHost = address[0];
@@ -70,8 +82,8 @@ public class Main {
         if(conn == null)
             return;
 
-        long to = System.currentTimeMillis() - TimeUnit.MILLISECONDS.convert(316,TimeUnit.DAYS);
-        long from = to - TimeUnit.MILLISECONDS.convert(10,TimeUnit.HOURS);
+        long to = System.currentTimeMillis();
+        long from = to - TimeUnit.MILLISECONDS.convert(5,TimeUnit.HOURS);
         while (true){
             System.out.println("Next cycle started. FROM: "+new Date(from)+" TO: "+new Date(to));
             currentIndex = es.ensureIndex(to);
