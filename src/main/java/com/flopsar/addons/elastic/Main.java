@@ -83,7 +83,7 @@ public class Main {
             return;
 
         long to = System.currentTimeMillis();
-        long from = to - TimeUnit.MILLISECONDS.convert(5,TimeUnit.HOURS);
+        long from = to - TimeUnit.MILLISECONDS.convert(5,TimeUnit.MINUTES);
         while (true){
             System.out.println("Next cycle started. FROM: "+new Date(from)+" TO: "+new Date(to));
             currentIndex = es.ensureIndex(to);
