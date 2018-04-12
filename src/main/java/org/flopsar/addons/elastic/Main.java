@@ -1,4 +1,4 @@
-package com.flopsar.addons.elastic;
+package org.flopsar.addons.elastic;
 
 
 import com.flopsar.fdbc.api.FDBCFactory;
@@ -97,10 +97,11 @@ public class Main {
             long endTime = System.currentTimeMillis();
 
             long secs = TimeUnit.SECONDS.convert(endTime - startTime,TimeUnit.MILLISECONDS);
+            long sleep = TimeUnit.MILLISECONDS.convert(30,TimeUnit.SECONDS);
             System.out.println(String.format("Cycle ended within %d seconds", secs));
             if (secs == 0){
-                Thread.sleep(1000);
-                endTime += 1000;
+                Thread.sleep(sleep);
+                endTime += sleep;
             }
             from = to + 1;
             to = endTime;

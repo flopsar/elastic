@@ -1,4 +1,4 @@
-group 'com.flopsar.addons'
+group 'org.flopsar.addons'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
@@ -7,7 +7,7 @@ apply plugin: 'application'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
-mainClassName = 'com.flopsar.addons.elastic.Main'
+mainClassName = 'org.flopsar.addons.elastic.Main'
 
 repositories {
     mavenLocal()

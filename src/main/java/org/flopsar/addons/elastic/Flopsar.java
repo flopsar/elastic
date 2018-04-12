@@ -1,4 +1,4 @@
-package com.flopsar.addons.elastic;
+package org.flopsar.addons.elastic;
 
 import com.flopsar.api.AgentId;
 import com.flopsar.fdbc.api.agent.Agent;
@@ -82,7 +82,6 @@ public class Flopsar {
         if (agents.isEmpty())
             return;
 
-        System.out.println("Agents available "+agents.size());
         Map<Long,long[]> agentsMap = new HashMap<>();
         int totalSent = 0;
         do {

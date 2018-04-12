@@ -1,4 +1,4 @@
-package com.flopsar.addons.elastic;
+package org.flopsar.addons.elastic;
 
 import com.flopsar.api.AgentId;
 import com.flopsar.fdbc.api.agent.Agent;

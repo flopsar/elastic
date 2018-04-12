@@ -1,4 +1,4 @@
-package com.flopsar.addons.elastic;
+package org.flopsar.addons.elastic;
 
 import com.google.common.io.Resources;
 import org.apache.commons.codec.Charsets;

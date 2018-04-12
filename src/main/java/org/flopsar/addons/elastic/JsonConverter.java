@@ -1,4 +1,4 @@
-package com.flopsar.addons.elastic;
+package org.flopsar.addons.elastic;
 
 import org.json.simple.JSONObject;
 
@@ -17,6 +17,8 @@ public class JsonConverter {
     private static final String CALL_EXCEPTION = "exception";
     private static final String CALL_DURATION = "duration";
 
+    private static final String KEY_VAL_SEPARATOR = "|";
+    private static final String KV_RECORD_SEPARATOR = "^";
 
 
     private static JSONObject prepare(String agent, long tstamp, String clazz) {
@@ -40,9 +42,11 @@ public class JsonConverter {
             StringBuilder sb = new StringBuilder();
             for (String k : parameters.keySet()) {
                 sb.append(k);
-                sb.append("|");
+                sb.append(KEY_VAL_SEPARATOR);
                 sb.append(parameters.get(k));
+                sb.append(KV_RECORD_SEPARATOR);
             }
+            sb.deleteCharAt(sb.length()-1);
             JSONObject p = new JSONObject();
             p.put(PARAMS_OTHER,sb.toString());
             obj.put(PARAMS, p);
