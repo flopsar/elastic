@@ -23,9 +23,8 @@ public class Flopsar {
 
 
 
-    private ConcurrentLinkedQueue<RootCall> retrieveRootCalls(ConnectionFDB conn, int threshold, Map<Long,long[]> agentsMap) throws Exception {
+    private ConcurrentLinkedQueue<RootCall> retrieveRootCalls(ConnectionFDB conn, int threshold, final Map<Long,long[]> agentsMap) throws Exception {
         ConcurrentLinkedQueue<RootCall> rootCallsQueue = new ConcurrentLinkedQueue<>();
-
         conn.findRootCallsByPattern(threshold, Integer.MAX_VALUE, agentsMap, null, null, null, (response, responseStatus) -> {
             if (response != null && (ResponseAsyncCallback.RESPONSE_ERROR != responseStatus)) {
                 System.out.println("# RootCalls received: "+response.size());
@@ -69,8 +68,12 @@ public class Flopsar {
                 fa.setFrom(from);
                 fa.setTo(to);
             }
-            if (fa.getTo() <= to)
+            if (fa.getTo() <= to) {
+                fa.setTo(to);
                 agentsMap.put(fa.getId().getId(), new long[]{fa.getFrom(), fa.getTo()});
+                System.out.println("Agent "+fa.getId().getName()+" selected.");
+            }
+            System.out.println("Agent "+fa.getId().getName()+" time range from: "+fa.getFrom()+" to: "+fa.getTo());
         }
     }
 
