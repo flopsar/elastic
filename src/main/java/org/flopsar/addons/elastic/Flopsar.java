@@ -25,11 +25,13 @@ public class Flopsar {
 
     private ConcurrentLinkedQueue<RootCall> retrieveRootCalls(ConnectionFDB conn, int threshold, final Map<Long,long[]> agentsMap) throws Exception {
         ConcurrentLinkedQueue<RootCall> rootCallsQueue = new ConcurrentLinkedQueue<>();
+        long timeout = 20000;
         conn.findRootCallsByPattern(threshold, Integer.MAX_VALUE, agentsMap, null, null, null, (response, responseStatus) -> {
             if (response != null && (ResponseAsyncCallback.RESPONSE_ERROR != responseStatus)) {
                 System.out.println("# RootCalls received: "+response.size());
                 rootCallsQueue.addAll(response);
             }
+            System.out.println("# RootCalls received status "+responseStatus);
             if (0 != responseStatus) {
                 synchronized (rootCallsQueue) {
                     rootCallsQueue.notify();
@@ -39,7 +41,8 @@ public class Flopsar {
         synchronized (rootCallsQueue) {
             while (true) {
                 try {
-                    rootCallsQueue.wait();
+                    rootCallsQueue.wait(timeout);
+                    System.out.println("RootCalls data ready.");
                     break;
                 } catch (InterruptedException e) { }
             }
